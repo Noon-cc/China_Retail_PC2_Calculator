@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>China Retail — PC2 Calculator</title>
+<style>
+  :root{
+    --ink:#14243a;
+    --ink-soft:#4a5b72;
+    --paper:#f3f5f8;
+    --card:#ffffff;
+    --line:#dde4ec;
+    --input-blue:#e4f0fb;        /* blue cells = inputs, like the workbook */
+    --input-blue-border:#9cc3e5;
+    --assume-yellow:#fdf7dd;     /* yellow cells = assumptions */
+    --assume-border:#e3d18a;
+    --pos:#0c7a4d;
+    --neg:#b3402a;
+    --accent:#1f5fa8;
+    --uae:#1f5fa8;
+    --ksa:#0c7a4d;
+    font-size:15px;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{
+    font-family:-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,"PingFang SC","Microsoft YaHei",sans-serif;
+    background:var(--paper);color:var(--ink);
+    padding:24px 16px 60px;
+  }
+  .wrap{max-width:1180px;margin:0 auto;}
+  header h1{font-size:1.35rem;font-weight:700;letter-spacing:.01em;}
+  header .sub{color:var(--ink-soft);font-size:.85rem;margin-top:4px;}
+  .legend{display:flex;gap:16px;margin-top:10px;font-size:.78rem;color:var(--ink-soft);flex-wrap:wrap;}
+  .legend span{display:inline-flex;align-items:center;gap:6px;}
+  .chip{width:14px;height:14px;border-radius:3px;display:inline-block;}
+  .chip.blue{background:var(--input-blue);border:1px solid var(--input-blue-border);}
+  .chip.yellow{background:var(--assume-yellow);border:1px solid var(--assume-border);}
+
+  .tabs{display:flex;gap:8px;margin:22px 0 16px;}
+  .tab-btn{
+    padding:10px 18px;border:1px solid var(--line);border-radius:8px 8px 0 0;
+    background:#e9edf3;color:var(--ink-soft);cursor:pointer;font-size:.9rem;font-weight:600;
+  }
+  .tab-btn.active{background:var(--card);color:var(--ink);border-bottom-color:var(--card);}
+  .tab-btn:focus-visible{outline:2px solid var(--accent);outline-offset:2px;}
+
+  .grid{display:grid;grid-template-columns:400px 1fr;gap:18px;align-items:start;}
+  @media(max-width:960px){.grid{grid-template-columns:1fr;}}
+
+  .card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:18px;}
+  .card h2{font-size:.8rem;text-transform:uppercase;letter-spacing:.08em;color:var(--ink-soft);margin-bottom:12px;}
+
+  .row{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:9px;}
+  .row label{font-size:.85rem;color:var(--ink);flex:1;}
+  .row .unit{font-size:.72rem;color:var(--ink-soft);min-width:52px;text-align:right;}
+  input[type=number],input[type=text],select{
+    font:inherit;font-size:.88rem;padding:6px 8px;border-radius:6px;
+    border:1px solid var(--input-blue-border);background:var(--input-blue);
+    width:120px;text-align:right;font-variant-numeric:tabular-nums;
+  }
+  input[type=text]{text-align:left;}
+  select{width:auto;text-align:left;padding-right:4px;}
+  .assume input,.assume select{background:var(--assume-yellow);border-color:var(--assume-border);}
+  input:focus-visible,select:focus-visible{outline:2px solid var(--accent);outline-offset:1px;}
+  .price-group{display:flex;gap:6px;}
+  .price-group input{width:96px;}
+  .derived{font-size:.85rem;color:var(--ink-soft);font-variant-numeric:tabular-nums;min-width:120px;text-align:right;}
+
+  details.assume{margin-top:14px;border-top:1px dashed var(--line);padding-top:10px;}
+  details.assume summary{cursor:pointer;font-size:.82rem;font-weight:600;color:var(--ink-soft);margin-bottom:10px;}
+  details.assume summary:focus-visible{outline:2px solid var(--accent);}
+
+  .headline{
+    display:flex;gap:14px;flex-wrap:wrap;margin-bottom:16px;
+  }
+  .kpi{
+    flex:1;min-width:180px;background:var(--card);border:1px solid var(--line);
+    border-radius:10px;padding:14px 16px;
+  }
+  .kpi .k-label{font-size:.72rem;text-transform:uppercase;letter-spacing:.07em;color:var(--ink-soft);}
+  .kpi .k-value{font-size:1.6rem;font-weight:700;margin-top:4px;font-variant-numeric:tabular-nums;}
+  .kpi .k-note{font-size:.75rem;color:var(--ink-soft);margin-top:2px;}
+  .kpi.hero{border-left:5px solid var(--accent);}
+  .pos{color:var(--pos);} .neg{color:var(--neg);}
+
+  table{width:100%;border-collapse:collapse;font-size:.85rem;}
+  th,td{padding:6px 8px;text-align:right;font-variant-numeric:tabular-nums;border-bottom:1px solid var(--line);}
+  th:first-child,td:first-child{text-align:left;}
+  thead th{font-size:.72rem;text-transform:uppercase;letter-spacing:.05em;color:var(--ink-soft);border-bottom:2px solid var(--line);}
+  tr.total td{font-weight:700;border-top:2px solid var(--ink);border-bottom:none;}
+  tr.pct td{font-weight:700;border-bottom:none;color:var(--accent);}
+  .country-cards{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
+  @media(max-width:760px){.country-cards{grid-template-columns:1fr;}}
+  .country-cards .card{padding:14px;}
+  .country-cards h3{font-size:.9rem;margin-bottom:10px;display:flex;align-items:center;gap:8px;}
+  .flag-dot{width:10px;height:10px;border-radius:50%;display:inline-block;}
+  .uae .flag-dot{background:var(--uae);} .ksa .flag-dot{background:var(--ksa);}
+  .selected-tag{font-size:.68rem;font-weight:700;color:#fff;background:var(--accent);padding:2px 8px;border-radius:10px;margin-left:auto;}
+
+  .bar-wrap{margin-top:10px;}
+  .bar{display:flex;height:14px;border-radius:4px;overflow:hidden;background:#eef1f5;margin-top:4px;}
+  .bar div{height:100%;}
+  .bar-label{font-size:.7rem;color:var(--ink-soft);display:flex;justify-content:space-between;}
+  .note{font-size:.74rem;color:var(--ink-soft);margin-top:10px;line-height:1.45;}
+  .hidden{display:none;}
+  .cnote{display:inline-block;margin-left:5px;width:15px;height:15px;line-height:15px;text-align:center;
+    border-radius:50%;background:#e8eef6;color:var(--accent);font-size:.68rem;font-weight:700;cursor:help;
+    border:1px solid var(--input-blue-border);vertical-align:1px;}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>New China Retail — PC2 Calculator</h1>
+    <div class="sub">US$ unless stated · EXW — DDP by Vendor · DDP rate card July 2026 (lowest final price per category)</div>
+    <div class="legend">
+      <span><span class="chip blue"></span>Blue = product inputs</span>
+      <span><span class="chip yellow"></span>Yellow = assumptions (editable)</span>
+    </div>
+  </header>
+
+  <!-- ============ FOB TAB ============ -->
+  <!-- ============ EXW TAB ============ -->
+  <section id="tab-exw">
+    <div class="grid">
+      <div>
+        <div class="card">
+          <h2>Product Profile</h2>
+          <div class="row"><label>Product Name</label><input type="text" id="e_name" value="Floor Lamp" style="width:160px"></div>
+          <div class="row"><label>Package Length</label><input type="number" id="e_len" value="24" step="1"><span class="unit">CM</span></div>
+          <div class="row"><label>Package Width</label><input type="number" id="e_wid" value="21" step="1"><span class="unit">CM</span></div>
+          <div class="row"><label>Package Height</label><input type="number" id="e_hei" value="7" step="1"><span class="unit">CM</span></div>
+          <div class="row"><label>Product Volume</label><span class="derived" id="e_vol">—</span><span class="unit">CBM</span></div>
+          <div class="row"><label>Product Weight</label><input type="number" id="e_wgt" value="0.083" step="0.01"><span class="unit">KG</span></div>
+          <div class="row"><label>Volumetric Weight<span class="cnote" title="L×W×H (cm³) ÷ divisor (default 6000). Chargeable air weight = max(actual, volumetric).">i</span></label><span class="derived" id="e_volw">—</span><span class="unit">KG</span></div>
+          <div class="row"><label>Air Freight Weight</label><span class="derived" id="e_airw">—</span><span class="unit">KG</span></div>
+          <div class="row"><label>Purchase Quantity</label><input type="number" id="e_qty" value="500" step="1"><span class="unit">#</span></div>
+          <div class="row"><label>Sea Freight Volume</label><span class="derived" id="e_totvol">—</span><span class="unit">CBM</span></div>
+          <div class="row"><label># of 40HQ Containers</label><span class="derived" id="e_cont">—</span><span class="unit">#</span></div>
+
+          <div class="row" style="margin-top:14px"><label>EXW Price</label>
+            <span class="price-group">
+              <input type="number" id="e_exw" value="26" step="0.01">
+              <select id="e_exw_cur"><option selected>USD</option><option>SAR</option><option>AED</option><option>CNY</option></select>
+            </span>
+          </div>
+          <div class="row"><label></label><span class="derived" id="e_exw_usd">—</span><span class="unit">USD</span></div>
+          <div class="row"><label>Listing Price</label>
+            <span class="price-group">
+              <input type="number" id="e_list" value="54" step="0.01">
+              <select id="e_list_cur"><option selected>USD</option><option>SAR</option><option>AED</option><option>CNY</option></select>
+            </span>
+          </div>
+          <div class="row"><label></label><span class="derived" id="e_list_usd">—</span><span class="unit">USD</span></div>
+          <div class="row" style="margin-top:14px"><label>Listing Country</label><select id="e_country"><option selected>KSA</option><option>UAE</option></select></div>
+          <div class="row"><label>Cargo Category<span class="cnote" title="July 2026 DDP rate card · lowest final price; forwarder shown in brackets. Selecting a category auto-fills the freight rate for the selected country.">i</span></label><select id="e_cat" style="max-width:230px"></select></div>
+          <div class="row"><label>Shipping Method</label><select id="e_ship"><option selected>Sea Freight</option><option>Air Freight</option></select></div>
+
+          <details class="assume">
+            <summary>Assumptions — FX, freight &amp; costs</summary>
+            <div class="row"><label>USD / CNY</label><input type="number" id="e_fx_cny" value="6.78" step="0.01"></div>
+            <div class="row"><label>USD / AED</label><input type="number" id="e_fx_aed" value="3.67" step="0.01"></div>
+            <div class="row"><label>USD / SAR</label><input type="number" id="e_fx_sar" value="3.75" step="0.01"></div>
+            <div class="row"><label>40HQ Volume</label><input type="number" id="e_hqvol" value="68" step="1"><span class="unit">CBM</span></div>
+            <div class="row"><label>Volumetric Divisor</label><input type="number" id="e_voldiv" value="6000" step="100"><span class="unit">cm³/KG</span></div>
+            <div class="row"><label>Air Freight DDP UAE</label><input type="number" id="e_air_uae" value="7.5" step="0.1"><span class="unit">USD/KG</span></div>
+            <div class="row"><label>Air Freight DDP KSA</label><input type="number" id="e_air_ksa" value="8.5" step="0.1"><span class="unit">USD/KG</span></div>
+            <div class="row"><label>Freight + Clearance UAE<span class="cnote" title="Auto-filled from category when Listing Country = UAE; editable">i</span></label><input type="number" id="e_frt_uae" value="1500" step="10"><span class="unit">RMB/CBM</span></div>
+            <div class="row"><label>Freight + Clearance KSA<span class="cnote" title="Auto-filled from category when Listing Country = KSA; editable">i</span></label><input type="number" id="e_frt_ksa" value="1750" step="10"><span class="unit">RMB/CBM</span></div>
+            <div class="row"><label>VAT UAE</label><input type="number" id="e_vat_uae" value="5" step="0.5"><span class="unit">%</span></div>
+            <div class="row"><label>VAT KSA</label><input type="number" id="e_vat_ksa" value="15" step="0.5"><span class="unit">%</span></div>
+            <div class="row"><label>FBN Warehouse</label><input type="number" id="e_fbn" value="53" step="1"><span class="unit">AED/CBM/mo</span></div>
+            <div class="row"><label>Last Mile Delivery</label><input type="number" id="e_lm" value="8" step="0.5"><span class="unit">AED/order</span></div>
+            <div class="row"><label>Expected Inventory Length</label><input type="number" id="e_inv" value="1" step="0.5"><span class="unit">months</span></div>
+            <div class="row"><label>Promotion Cost (% of purchase price)</label><input type="number" id="e_promo" value="10" step="1"><span class="unit">%</span></div>
+            <div class="note">Air Freight: DDP $/KG on chargeable weight (max of actual and volumetric); category selector applies to sea only and is disabled in air mode. July 2026 DDP rate card (lowest final price per cargo category; 易通 rates require ≥3 CBM). Rate includes pickup at vendor warehouse, sea freight, customs clearance and delivery to ME warehouse — no separate duty line. Category selector auto-fills the selected country’s rate; the other country keeps its manual value.</div>
+          </details>
+        </div>
+      </div>
+
+      <div>
+        <div class="headline">
+          <div class="kpi hero">
+            <div class="k-label">Indicative PC2 % — <span id="e_ctry_label">KSA</span></div>
+            <div class="k-value" id="e_kpi_pct">—</div>
+            <div class="k-note" id="e_kpi_note">—</div>
+          </div>
+          <div class="kpi"><div class="k-label">PC2 / item · UAE</div><div class="k-value" id="e_kpi_uae">—</div><div class="k-note" id="e_kpi_uae_pct">—</div></div>
+          <div class="kpi"><div class="k-label">PC2 / item · KSA</div><div class="k-value" id="e_kpi_ksa">—</div><div class="k-note" id="e_kpi_ksa_pct">—</div></div>
+        </div>
+        <div class="country-cards">
+          <div class="card uae"><h3><span class="flag-dot"></span>Product PC2 in UAE <span class="selected-tag hidden" id="e_tag_uae">Listing country</span></h3><div id="e_tbl_uae"></div></div>
+          <div class="card ksa"><h3><span class="flag-dot"></span>Product PC2 in KSA <span class="selected-tag hidden" id="e_tag_ksa">Listing country</span></h3><div id="e_tbl_ksa"></div></div>
+        </div>
+      </div>
+    </div>
+  </section>
+</div>
+
+<script>
+const $ = id => document.getElementById(id);
+const num = id => { const v = parseFloat($(id).value); return isFinite(v) ? v : 0; };
+
+function fx(prefix){ return { CNY:num(prefix+'_fx_cny'), AED:num(prefix+'_fx_aed'), SAR:num(prefix+'_fx_sar'), USD:1 }; }
+function toUSD(val, cur, rates){ return cur==='USD' ? val : val / rates[cur]; }
+const f2 = n => (n<0?'-':'') + '$' + Math.abs(n).toFixed(2);
+const loc2 = (n,c) => (n<0?'-':'') + Math.abs(n).toFixed(2) + ' ' + c;
+const pct1 = n => (n*100).toFixed(1) + '%';
+
+function renderTable(elId, rows, localCur, localRate){
+  let html = '<table><thead><tr><th>Cost Type</th><th>USD</th><th>'+localCur+'</th></tr></thead><tbody>';
+  rows.forEach(r=>{
+    const cls = r.cls || '';
+    html += '<tr class="'+cls+'"><td>'+r.label+'</td><td class="'+(r.val<0?'neg':'')+'">'
+          + (r.pct!==undefined ? pct1(r.val) : f2(r.val)) + '</td><td>'
+          + (r.pct!==undefined ? pct1(r.val) : loc2(r.val*localRate, localCur)) + '</td></tr>';
+  });
+  html += '</tbody></table>';
+  $(elId).innerHTML = html;
+}
+
+/* ---------- EXW tab ---------- */
+function calcEXW(){
+  const r = fx('e');
+  const vol = num('e_len')*num('e_wid')*num('e_hei')/1e6;
+  const qty = num('e_qty');
+  const hq  = num('e_hqvol');
+  const totVol = vol*qty;
+  $('e_vol').textContent = vol.toFixed(4);
+  $('e_totvol').textContent = totVol.toFixed(1);
+  $('e_cont').textContent = hq>0 ? (totVol/hq).toFixed(2) : '—';
+
+  const exw = toUSD(num('e_exw'), $('e_exw_cur').value, r);
+  const list = toUSD(num('e_list'), $('e_list_cur').value, r);
+  $('e_exw_usd').textContent = '= ' + f2(exw);
+  $('e_list_usd').textContent = '= ' + f2(list);
+
+  const volW = num('e_len')*num('e_wid')*num('e_hei')/Math.max(num('e_voldiv'),1);
+  const airW = Math.max(num('e_wgt'), volW);
+  $('e_volw').textContent = volW.toFixed(3);
+  $('e_airw').textContent = airW.toFixed(2);
+  const isAir = $('e_ship').value === 'Air Freight';
+  $('e_cat').disabled = isAir;
+  const airRate = { UAE: num('e_air_uae'), KSA: num('e_air_ksa') };  // USD/KG
+  const perCBM = { UAE: num('e_frt_uae')/r.CNY, KSA: num('e_frt_ksa')/r.CNY };  // RMB/CBM → USD/CBM
+  const vat = { UAE: num('e_vat_uae')/100, KSA: num('e_vat_ksa')/100 };
+  const fbnUSD = num('e_fbn')/r.AED, lmUSD = num('e_lm')/r.AED;
+  const fulfill = vol*fbnUSD*num('e_inv') + lmUSD;
+  const promo = exw * num('e_promo')/100;
+
+  const out = {};
+  ['UAE','KSA'].forEach(c=>{
+    const sea = isAir ? airW*airRate[c] : vol*perCBM[c];
+    const vatOut = list/(1+vat[c]) - list;
+    const pc2 = list - exw - sea + vatOut - fulfill - promo;
+    out[c] = { rows:[
+      {label:'Listing Price', val:list},
+      {label:'(-) EXW Price', val:-exw},
+      {label: (isAir?'(-) Air Freight + Customs Clearance':'(-) Sea Freight + Customs Clearance'), val:-sea},
+      {label:'Landed Cost (DDP)', val:exw+sea, cls:'total'},
+      {label:'(-) VAT-Out', val:vatOut},
+      {label:'(-) Fulfilment Cost', val:-fulfill},
+      {label:'(-) Promo Cost', val:-promo},
+      {label:'Product PC2', val:pc2, cls:'total'},
+      {label:'PC2 %', val: list!==0 ? pc2/list : 0, pct:true, cls:'pct'}
+    ], pc2, pct: list!==0 ? pc2/list : 0, landed: exw+sea };
+  });
+
+  renderTable('e_tbl_uae', out.UAE.rows, 'AED', r.AED);
+  renderTable('e_tbl_ksa', out.KSA.rows, 'SAR', r.SAR);
+
+  const ctry = $('e_country').value;
+  $('e_ctry_label').textContent = ctry;
+  $('e_kpi_pct').textContent = pct1(out[ctry].pct);
+  $('e_kpi_pct').className = 'k-value ' + (out[ctry].pc2>=0?'pos':'neg');
+  $('e_kpi_note').textContent = f2(out[ctry].pc2) + ' per item · Landed cost ' + f2(out[ctry].landed) + ' · ' + ($('e_name').value || 'Product');
+  $('e_kpi_uae').textContent = f2(out.UAE.pc2); $('e_kpi_uae').className='k-value '+(out.UAE.pc2>=0?'pos':'neg');
+  $('e_kpi_uae_pct').textContent = pct1(out.UAE.pct)+' of listing';
+  $('e_kpi_ksa').textContent = f2(out.KSA.pc2); $('e_kpi_ksa').className='k-value '+(out.KSA.pc2>=0?'pos':'neg');
+  $('e_kpi_ksa_pct').textContent = pct1(out.KSA.pct)+' of listing';
+  $('e_tag_uae').classList.toggle('hidden', ctry!=='UAE');
+  $('e_tag_ksa').classList.toggle('hidden', ctry!=='KSA');
+}
+
+/* ---------- DDP rate card (July 2026, lowest final price, RMB/CBM) ---------- */
+const RATES = {
+  KSA: [
+    {name:'普货/纺织家居无电', en:'General / textile & home, no electronics', rmb:1143, fw:'易通≥3CBM'},
+    {name:'3C配件/非普货', en:'3C accessories / non-general cargo', rmb:1400, fw:'义特'},
+    {name:'玩具', en:'Toys', rmb:1400, fw:'义特'},
+    {name:'小家电', en:'Small appliances', rmb:1750, fw:'义特'},
+    {name:'灯具', en:'Lighting', rmb:1750, fw:'易通≥3CBM'},
+    {name:'卫浴', en:'Sanitary ware / bath', rmb:1750, fw:'易通≥3CBM'},
+    {name:'电商混装杂货', en:'Mixed e-commerce goods', rmb:1830, fw:'易通≥3CBM'},
+    {name:'汽配/大型健身', en:'Auto parts / large fitness equipment', rmb:1885, fw:'易通≥3CBM'},
+    {name:'饰品/美容仪', en:'Jewelry & accessories / beauty devices', rmb:1885, fw:'易通≥3CBM'},
+    {name:'大家电', en:'Large appliances', rmb:1900, fw:'易通≥3CBM'},
+    {name:'摄像头/特殊敏感', en:'Cameras / special sensitive cargo', rmb:3240, fw:'义特'}
+  ],
+  UAE: [
+    {name:'普货/非纯电杂货', en:'General / non-pure-battery goods', rmb:1200, fw:'易通≥3CBM / 合联-DXB'},
+    {name:'重货', en:'Heavy cargo', rmb:1430, fw:'亦邦-华南/华东'},
+    {name:'非普货/内置电', en:'Non-general / built-in battery', rmb:1500, fw:'易通≥3CBM'},
+    {name:'敏感/特敏货', en:'Sensitive / highly sensitive cargo', rmb:1650, fw:'易通≥3CBM'}
+  ]
+};
+const DEFAULT_CAT = { KSA:'灯具', UAE:'非普货/内置电' };
+
+function populateCats(keepName){
+  const c = $('e_country').value;
+  const sel = $('e_cat');
+  sel.innerHTML = '<option value="">Custom — manual rate</option>' +
+    RATES[c].map(o=>'<option value="'+o.name+'">'+o.name+' · '+o.en+' — '+o.rmb+' RMB ('+o.fw+')</option>').join('');
+  const want = keepName!==undefined ? keepName : DEFAULT_CAT[c];
+  if (want && RATES[c].some(o=>o.name===want)) sel.value = want; else sel.value='';
+  applyCat();
+}
+function applyCat(){
+  const c = $('e_country').value;
+  const o = RATES[c].find(x=>x.name===$('e_cat').value);
+  if (o) $(c==='KSA' ? 'e_frt_ksa' : 'e_frt_uae').value = o.rmb;
+  calcEXW();
+}
+$('e_cat').addEventListener('change', applyCat);
+$('e_country').addEventListener('change', ()=>populateCats());
+document.querySelectorAll('#tab-exw input, #tab-exw select').forEach(el=>{
+  if (el.id!=='e_cat' && el.id!=='e_country') el.addEventListener('input', calcEXW);
+});
+populateCats();
+</script>
+</body>
+</html>
